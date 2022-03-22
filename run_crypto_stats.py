@@ -22,6 +22,7 @@ set_eth_env_key()
 from web3.auto.infura import w3 as eth_chain
 ## fantom
 from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware # need middleware injection for POA chains
 
 TIME_INTERVAL=20 #mins
 SLEEP_TIME=TIME_INTERVAL*60
@@ -45,9 +46,11 @@ def ftm_connection():
 
 def polygon_connection():
     print('Creating Fantom network connection...')
-    return Web3(HTTPProvider(Get_node_key(PLYGN_NETWORK_NODE_KEY)))
+    plygn = Web3(HTTPProvider(Get_node_key(PLYGN_NETWORK_NODE_KEY)))
+    plygn.middleware_onion.inject(geth_poa_middleware, layer=0)
+    return plygn
 
-def algorand_connection():
+def algorand_connection(): # work in progress... not a great amount of info on calling from provider...
     print('Creating Fantom network connection...')
     return Web3(HTTPProvider(Get_node_key(ALGO_NETWORK_NODE_KEY)))
 
@@ -131,11 +134,15 @@ async def run_script():
     eth_clients=dict()
     eth_clients['ETH'] = eth_chain # imported directly from Infura
     eth_clients['FTM'] = ftm_connection() # created from Quicknode account
+    eth_clients['POLY'] = polygon_connection() # created from Quicknode account
+    counter=1
     while True:
+        print('running: {}'.format(counter)) # currently running this live to track for bugs.. 
         for chain, client in eth_clients.items():
             get_eth_data(db,client,chain)
         for chain, client in sol_clients.items():
             await get_sol_data(db,client,chain)
+        counter=counter+1
         time.sleep(SLEEP_TIME)
 
 if __name__ == "__main__":
